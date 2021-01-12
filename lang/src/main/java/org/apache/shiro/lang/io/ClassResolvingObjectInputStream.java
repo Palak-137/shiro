@@ -21,6 +21,8 @@ package org.apache.shiro.lang.io;
 import org.apache.shiro.lang.util.ClassUtils;
 import org.apache.shiro.lang.util.UnknownClassException;
 
+import java.util.Arrays;
+import java.util.List;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -38,6 +40,21 @@ public class ClassResolvingObjectInputStream extends ObjectInputStream {
         super(inputStream);
     }
 
+    /** black listing the files causing the vurnability in deserielzation*/
+     
+
+     final List<String> isBlacklisted = Arrays.asList("org.apache.commons.collections.functors.ChainedTransformer.transform",
+                                                     "org.apache.commons.collections.functors.InvokerTransformer",
+                                                     "org.apache.commons.collections.functors.InstantiateTransformer",
+                                                     "org.apache.commons.collections4.functors.InvokerTransformer",
+                                                     "org.apache.commons.collections4.functors.InstantiateTransformer",
+                                                     "org.codehaus.groovy.runtime.ConvertedClosure",
+                                                     "org.codehaus.groovy.runtime.MethodClosure",
+                                                     " org.springframework.beans.factory.ObjectFactory",
+                                                     "xalan.internal.xsltc.trax.TemplatesImpl");
+
+
+
     /**
      * Resolves an {@link ObjectStreamClass} by delegating to Shiro's 
      * {@link ClassUtils#forName(String)} utility method, which is known to work in all ClassLoader environments.
@@ -49,8 +66,12 @@ public class ClassResolvingObjectInputStream extends ObjectInputStream {
      */
     @Override
     protected Class<?> resolveClass(ObjectStreamClass osc) throws IOException, ClassNotFoundException {
+        String name = osc.getName();
         try {
-            return ClassUtils.forName(osc.getName());
+            if(isBlacklisted.contains(name)){
+                throw new IOException("Cannot be Deseialized");
+            }
+            return ClassUtils.forName(name);
         } catch (UnknownClassException e) {
             throw new ClassNotFoundException("Unable to load ObjectStreamClass [" + osc + "]: ", e);
         }
